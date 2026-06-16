@@ -126,9 +126,15 @@
   body.is-touch .ticker{display:none}
   body.is-touch .minimap{width:104px;height:104px}
   .topright{flex-wrap:wrap;justify-content:flex-end;max-width:62vw}
-  .hud .prog{margin-top:7px;display:inline-block;font-family:var(--mono);font-size:11px;letter-spacing:.04em;
-    color:#fff;background:rgba(20,40,70,.34);border:1px solid rgba(255,255,255,.4);border-radius:999px;
-    padding:4px 11px;backdrop-filter:blur(3px);text-shadow:none}
+  .prog{position:fixed;z-index:18;bottom:24px;right:180px;display:flex;align-items:center;gap:9px;
+    font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:#fff;
+    background:rgba(20,40,70,.36);border:1px solid rgba(255,255,255,.4);border-radius:999px;
+    padding:6px 12px;backdrop-filter:blur(3px)}
+  .prog .pips{display:flex;gap:5px}
+  .prog .pips span{width:14px;height:6px;border-radius:3px;background:rgba(255,255,255,.22);transition:background .35s}
+  .prog .plabel{opacity:.95;white-space:nowrap}
+  body.is-touch .prog{right:124px;bottom:18px}
+  @media(max-width:560px){ .prog{right:124px;bottom:16px;padding:5px 9px} .prog .pips span{width:11px} }
   .pill.paint{position:relative;overflow:hidden;cursor:pointer}
   .pill.paint .sw{width:13px;height:13px;border-radius:50%;border:1px solid rgba(0,0,0,.2);background:#e11d2a}
   .pill.paint input[type=color]{position:absolute;inset:0;opacity:0;cursor:pointer;border:0;padding:0}
@@ -178,22 +184,25 @@
 <div class="hud">
   <div class="eyebrow" id="hudRole">Supply Chain · Analytics</div>
   <div class="name">Debanshu Poddar<b>.</b></div>
-  <div class="prog" id="prog">Explored 0 / 6</div>
 </div>
 
 <div class="topright">
   <label class="pill paint" id="paintPill"><span class="sw" id="paintSw"></span>Paint
     <input type="color" id="paintInput" value="#e11d2a" />
   </label>
-  <button class="pill" id="btnNight">Night</button>
   <button class="pill" id="btnSound"><span class="dot"></span>Sound</button>
-  <button class="pill" id="btnHelp">Controls</button>
   <button class="pill" id="btnTour">Auto-tour</button>
 </div>
 
 <div class="ticker" id="ticker">
   <b>WASD / Arrows</b> to drive · <b>Space</b> brake<br/>
   Drive into a <b>beacon</b> to open a section
+</div>
+
+<!-- Completion bar (bottom, beside the map) -->
+<div class="prog" id="prog">
+  <span class="plabel" id="plabel">0 / 6</span>
+  <div class="pips" id="pips"></div>
 </div>
 
 <!-- Minimap -->
@@ -330,5 +339,4 @@ const CONFIG = {
           <div class="tagrow"><span class="tag">Power BI (DAX)</span><span class="tag">Tableau</span><span class="tag">SAP ERP</span><span class="tag">PLM Systems</span><span class="tag">SQL</span><span class="tag">Python</span><span class="tag">Excel (Macros)</span><span class="tag">Power Query</span><span class="tag">Minitab</span><span class="tag">Jira</span></div></div>
         <div class="skillgroup"><div class="gh">Sourcing and Procurement</div>
           <div class="tagrow"><span class="tag">Strategic Sourcing</span><span class="tag">RFX Cycle</span><span class="tag">Should-Cost</span><span class="tag">TCO</span><span class="tag">Vendor Scorecards</span><span class="tag">INCO terms</span></div></div>
-        <div class="skillgroup"><div class="gh">Planning and Quality</div>
-          <div class="tagrow"><span class="tag">Demand Planning</span><span class="tag">Inventory Optimization</span><span class="tag">Lean / Kaizen</span><span class="tag">NPI / EOL</span><span class="tag">8D SCAR</span><span class="tag">APQP</span><span class="tag">RCA</span><span class="tag">Pareto</span><span class="tag">TQM</span></div></d
+        <div c
