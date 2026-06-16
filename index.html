@@ -109,20 +109,40 @@
   .start:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(225,29,42,.5)}
   .loadnote{margin-top:18px;font-family:var(--mono);font-size:11px;color:#7f96b6;letter-spacing:.05em}
 
-  /* ---- mobile touch controls ---- */
-  .touch{position:fixed;z-index:22;inset:auto 0 0 0;bottom:14px;display:none;
-    justify-content:space-between;padding:0 16px;pointer-events:none}
-  .touch .group{display:flex;gap:12px;pointer-events:auto}
-  .tbtn{width:62px;height:62px;border-radius:18px;border:1px solid rgba(255,255,255,.4);
-    background:rgba(255,255,255,.16);backdrop-filter:blur(5px);color:#fff;font-size:24px;font-weight:700;
-    display:flex;align-items:center;justify-content:center;user-select:none;touch-action:none;
-    box-shadow:0 8px 20px rgba(20,40,70,.25)}
-  .tbtn:active{background:rgba(225,29,42,.55)}
-  body.is-touch .touch{display:flex}
+  /* ---- analog drive stick (touch) ---- */
+  #app{touch-action:none}
+  .stick{position:fixed;z-index:24;width:128px;height:128px;margin:-64px 0 0 -64px;border-radius:50%;
+    border:1.5px solid rgba(255,255,255,.22);background:rgba(255,255,255,.04);
+    display:none;pointer-events:none}
+  .stick.on{display:block}
+  .stick .knob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;
+    background:rgba(225,29,42,.38);box-shadow:0 3px 10px rgba(0,0,0,.16);will-change:transform}
+  .mobhint{position:fixed;z-index:18;left:50%;bottom:26px;transform:translateX(-50%);display:none;
+    font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:#fff;text-align:center;
+    background:rgba(20,40,70,.42);padding:9px 15px;border-radius:999px;backdrop-filter:blur(4px);
+    text-shadow:0 1px 2px rgba(0,0,0,.3);transition:opacity .5s;pointer-events:none}
+  body.is-touch .mobhint{display:block}
   body.is-touch .ticker{display:none}
-  /* keep the map clear of the on-screen driving buttons on touch devices */
-  body.is-touch .minimap{bottom:98px;right:12px;width:104px;height:104px}
+  body.is-touch .minimap{width:104px;height:104px}
   .topright{flex-wrap:wrap;justify-content:flex-end;max-width:62vw}
+
+  /* intro: show keyboard hint on desktop, drag hint on touch */
+  .touchhint{display:none;color:#bcd0ea;font-size:14px;line-height:1.6;margin-bottom:26px}
+  .touchhint p{margin:14px 0 0}
+  body.is-touch .keys{display:none}
+  body.is-touch .touchhint{display:block}
+  .stickdemo{position:relative;width:96px;height:96px;margin:0 auto;border-radius:50%;
+    border:2px solid rgba(255,255,255,.3);background:rgba(255,255,255,.06)}
+  .stickdemo .ring{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 0 rgba(225,29,42,.4)}
+  .stickdemo .dot{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;
+    background:rgba(225,29,42,.9);animation:stickmove 2.6s ease-in-out infinite}
+  @keyframes stickmove{
+    0%{transform:translate(0,0)}
+    20%{transform:translate(0,-26px)}
+    45%{transform:translate(22px,-10px)}
+    70%{transform:translate(-22px,-10px)}
+    100%{transform:translate(0,0)}
+  }
 
   @media (max-width:560px){
     .minimap{width:110px;height:110px}
@@ -130,6 +150,7 @@
   }
   @media (prefers-reduced-motion:reduce){
     .panel,.intro,.start,.pill{transition:none}
+    .stickdemo .dot{animation:none}
   }
 
   /* diagnostic overlay, only shows if something fails */
@@ -169,17 +190,9 @@
   <canvas id="mini" width="296" height="296"></canvas>
 </div>
 
-<!-- Touch controls -->
-<div class="touch">
-  <div class="group">
-    <div class="tbtn" data-k="left">‹</div>
-    <div class="tbtn" data-k="right">›</div>
-  </div>
-  <div class="group">
-    <div class="tbtn" data-k="back">▾</div>
-    <div class="tbtn" data-k="fwd">▴</div>
-  </div>
-</div>
+<!-- Floating analog drive stick: appears under your finger on touch -->
+<div class="stick" id="stick"><div class="knob"></div></div>
+<div class="mobhint" id="mobhint">Hold and drag anywhere to drive</div>
 
 <!-- Content panel -->
 <aside class="panel" id="panel">
@@ -200,11 +213,17 @@
     <div class="kick">Drive-through portfolio</div>
     <h1>Hi, I'm <span>Debanshu</span>.</h1>
     <p class="sub">A little low-poly world. Drive the car into a glowing beacon to explore each part of my work, no scrolling required.</p>
-    <div class="keys">
+    <div class="keys" id="keysHint">
       <div class="kg"><div class="row"><span class="keycap">W</span></div>
         <div class="row"><span class="keycap">A</span><span class="keycap">S</span><span class="keycap">D</span></div>
         <span>steer</span></div>
       <div class="kg"><div class="row"><span class="keycap">␣</span></div><span>brake</span></div>
+    </div>
+    <div class="touchhint" id="touchHint">
+      <div class="stickdemo"><span class="ring"></span><span class="dot"></span></div>
+      <p>Touch and hold anywhere, then drag.<br/>
+         Drag up to go, down to reverse, left or right to steer.<br/>
+         The further you drag, the more throttle you give.</p>
     </div>
     <button class="start" id="startBtn">Start driving</button>
     <div class="loadnote" id="loadNote">loading world…</div>
@@ -348,7 +367,8 @@ const WORLD=240;                 // play-area radius
 const state={
   pos:new THREE.Vector3(0,0,0),
   heading:0, speed:0,
-  input:{throttle:0,steer:0,brake:false}
+  input:{throttle:0,steer:0,brake:false},
+  drive:{active:false,throttle:0,steer:0}
 };
 const keys={};
 let started=false, autoTour=false, tourIdx=0, tourTimer=0;
@@ -360,9 +380,10 @@ document.documentElement.style.setProperty('--accent',accentHex);
 document.getElementById('hudRole').textContent=CONFIG.role;
 
 /* ---- sound: synthesized engine hum + soft ambient music (no audio files) ---- */
+/* ---- sound: synthesized engine hum + soft ambient music (no audio files) ---- */
 const Sound = {
-  ctx:null, master:null, music:null, engGain:null, engOsc1:null, engOsc2:null, engFilt:null,
-  enabled:true, started:false, scale:[],
+  ctx:null, master:null, music:null, engGain:null, engOsc1:null, engFilt:null,
+  enabled:true, started:false,
   init(){
     try{
       if(!this.started){
@@ -371,55 +392,69 @@ const Sound = {
         this.master=this.ctx.createGain();
         this.master.gain.value=this.enabled?0.85:0.0;
         this.master.connect(this.ctx.destination);
-        // engine: two low oscillators through a lowpass, gain follows speed
+        
+        // ENGINE: One clean, deep oscillator. Much quieter.
         this.engGain=this.ctx.createGain(); this.engGain.gain.value=0; this.engGain.connect(this.master);
-        this.engFilt=this.ctx.createBiquadFilter(); this.engFilt.type='lowpass'; this.engFilt.frequency.value=500; this.engFilt.connect(this.engGain);
-        this.engOsc1=this.ctx.createOscillator(); this.engOsc1.type='sawtooth'; this.engOsc1.frequency.value=50; this.engOsc1.connect(this.engFilt); this.engOsc1.start();
-        this.engOsc2=this.ctx.createOscillator(); this.engOsc2.type='square'; this.engOsc2.frequency.value=25; this.engOsc2.detune.value=10; this.engOsc2.connect(this.engFilt); this.engOsc2.start();
-        // music bus
-        this.music=this.ctx.createGain(); this.music.gain.value=0.5; this.music.connect(this.master);
-        this.scale=[220.00,261.63,293.66,329.63,392.00,440.00,523.25,587.33]; // A minor-ish set
+        this.engFilt=this.ctx.createBiquadFilter(); this.engFilt.type='lowpass'; this.engFilt.frequency.value=250; this.engFilt.connect(this.engGain);
+        this.engOsc1=this.ctx.createOscillator(); this.engOsc1.type='sawtooth'; this.engOsc1.frequency.value=40; this.engOsc1.connect(this.engFilt); this.engOsc1.start();
+        
+        // MUSIC: Warm pad + soft melodic plucks
+        this.music=this.ctx.createGain(); this.music.gain.value=0.35; this.music.connect(this.master);
         this.started=true;
         this._pad(); this._loop();
       }
       if(this.ctx && this.ctx.state==='suspended') this.ctx.resume();
     }catch(e){ /* audio is optional, never break the app */ }
   },
-  _pad(){ // slow sustained drone for warmth
-    [110.0,164.81].forEach((f,i)=>{
-      const o=this.ctx.createOscillator(); o.type='sine'; o.frequency.value=f;
+  _pad(){
+    // Relaxed, warm Lydian/Pentatonic-friendly progression
+    this.prog=[
+      {pad:[174.61, 220.00, 261.63], notes:[349.23, 440.00, 523.25, 659.25]}, // F major
+      {pad:[130.81, 164.81, 196.00], notes:[392.00, 440.00, 523.25, 659.25]}  // C major
+    ];
+    this.chordIx=0; this.padOsc=[];
+    for(let i=0;i<3;i++){
+      const o=this.ctx.createOscillator(); o.type='triangle'; // Triangle is rounder/warmer than sine
+      o.frequency.value=this.prog[0].pad[i];
       const g=this.ctx.createGain(); g.gain.value=0; o.connect(g); g.connect(this.music); o.start();
-      g.gain.setTargetAtTime(0.05,this.ctx.currentTime,5);
-      const lfo=this.ctx.createOscillator(); lfo.frequency.value=0.05+i*0.03;
-      const lg=this.ctx.createGain(); lg.gain.value=2.5; lfo.connect(lg); lg.connect(o.detune); lfo.start();
-    });
+      g.gain.setTargetAtTime(0.045,this.ctx.currentTime,4);
+      this.padOsc.push(o);
+    }
   },
-  _note(t,f,dur,v){
-    const o=this.ctx.createOscillator(); o.type='triangle'; o.frequency.value=f;
+  _bell(t,f,v){
+    // Soft marimba-like pluck
+    const o=this.ctx.createOscillator(); o.type='sine'; o.frequency.value=f;
     const g=this.ctx.createGain(); o.connect(g); g.connect(this.music);
     g.gain.setValueAtTime(0,t);
-    g.gain.linearRampToValueAtTime(v,t+0.7);
-    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-    o.start(t); o.stop(t+dur+0.1);
+    g.gain.linearRampToValueAtTime(v,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001,t+1.0); // Longer, warmer decay
+    o.start(t); o.stop(t+1.1);
   },
-  _loop(){ // gentle, sparse melody that keeps rescheduling itself
+  _loop(){
     if(!this.started) return;
-    const now=this.ctx.currentTime; let t=now+0.1;
-    const n=2+Math.floor(Math.random()*3);
-    for(let i=0;i<n;i++){
-      const f=this.scale[Math.floor(Math.random()*this.scale.length)];
-      this._note(t,f,3.2+Math.random()*2.2,0.04+Math.random()*0.03);
-      t+=1.5+Math.random()*2.0;
+    const ch=this.prog[this.chordIx], now=this.ctx.currentTime;
+    this.padOsc.forEach((o,i)=>o.frequency.setTargetAtTime(ch.pad[i],now,2.5)); // Slower, smoother chord changes
+
+    // Sparse, gentle, bouncing rhythm
+    const pat=[0, 1, null, 2, null, 1, 3, null];
+    const step=0.45; // Slower, relaxed pace
+    let t=now+0.1;
+    for(let i=0;i<pat.length;i++){
+      if(pat[i]!==null && Math.random()<0.75){ // Play occasionally for organic variation
+        this._bell(t, ch.notes[pat[i]], 0.05 + Math.random()*0.02);
+      }
+      t+=step;
     }
+    this.chordIx=(this.chordIx+1)%this.prog.length;
     setTimeout(()=>this._loop(),(t-now)*1000);
   },
   updateEngine(speed,maxF){
     if(!this.started) return;
     const sp=Math.min(1,Math.abs(speed)/maxF), now=this.ctx.currentTime;
-    this.engOsc1.frequency.setTargetAtTime(46+sp*120,now,0.06);
-    this.engOsc2.frequency.setTargetAtTime((46+sp*120)*0.5,now,0.06);
-    this.engFilt.frequency.setTargetAtTime(350+sp*1500,now,0.06);
-    this.engGain.gain.setTargetAtTime(0.015+sp*0.045,now,0.08);
+    this.engOsc1.frequency.setTargetAtTime(40+sp*80,now,0.08);
+    this.engFilt.frequency.setTargetAtTime(250+sp*800,now,0.08);
+    // Max volume heavily reduced (maxes out around 0.008 instead of 0.02)
+    this.engGain.gain.setTargetAtTime(0.001+sp*0.007,now,0.08);
   },
   toggle(){
     this.enabled=!this.enabled;
@@ -821,18 +856,8 @@ function bindInput(){
   });
   addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 
-  // touch buttons
-  const tmap={};
-  document.querySelectorAll('.tbtn').forEach(b=>{
-    const k=b.dataset.k;
-    const on=e=>{e.preventDefault();tmap[k]=true;};
-    const off=e=>{e.preventDefault();tmap[k]=false;};
-    b.addEventListener('touchstart',on,{passive:false});
-    b.addEventListener('touchend',off,{passive:false});
-    b.addEventListener('touchcancel',off,{passive:false});
-    b.addEventListener('mousedown',on);b.addEventListener('mouseup',off);b.addEventListener('mouseleave',off);
-  });
-  state.touch=tmap;
+  // analog drive stick: hold and drag anywhere; direction + distance set steer/throttle
+  bindDriveStick();
 
   document.getElementById('startBtn').onclick=()=>{
     started=true;
@@ -863,15 +888,62 @@ function bindInput(){
   document.getElementById('pClose').onclick=closePanel;
 }
 
+function bindDriveStick(){
+  const stick=document.getElementById('stick');
+  const knob=stick.querySelector('.knob');
+  const hint=document.getElementById('mobhint');
+  const R=54;                       // max drag radius in px = full throttle/steer
+  let id=null, ox=0, oy=0;
+
+  function isUI(el){
+    return el && el.closest && el.closest('.pill,.panel,.intro,.minimap,.topright,.x,#err,a,button');
+  }
+  function start(e){
+    if(!started) return;            // only while driving
+    if(isUI(e.target)) return;      // let buttons, links, panel work normally
+    id=e.pointerId; ox=e.clientX; oy=e.clientY;
+    stick.style.left=ox+'px'; stick.style.top=oy+'px';
+    knob.style.transform='translate(0px,0px)';
+    stick.classList.add('on');
+    state.drive={active:true,throttle:0,steer:0};
+    if(hint){ hint.style.opacity='0'; }
+    e.preventDefault();
+  }
+  function move(e){
+    if(id===null || e.pointerId!==id) return;
+    let dx=e.clientX-ox, dy=e.clientY-oy;
+    const d=Math.hypot(dx,dy);
+    if(d>R){ dx*=R/d; dy*=R/d; }
+    knob.style.transform='translate('+dx+'px,'+dy+'px)';
+    state.drive.steer    = Math.max(-1,Math.min(1, -dx/R));   // drag left = steer left
+    state.drive.throttle = Math.max(-1,Math.min(1, -dy/R));   // drag up = accelerate
+    e.preventDefault();
+  }
+  function end(e){
+    if(id!==null && e.pointerId!==id) return;
+    id=null; stick.classList.remove('on');
+    state.drive={active:false,throttle:0,steer:0};
+  }
+  window.addEventListener('pointerdown',start,{passive:false});
+  window.addEventListener('pointermove',move,{passive:false});
+  window.addEventListener('pointerup',end);
+  window.addEventListener('pointercancel',end);
+}
+
 function readInput(dt){
-  const t=state.touch||{};
   let throttle=0,steer=0;
-  if(keys['w']||keys['arrowup']||t.fwd)throttle+=1;
-  if(keys['s']||keys['arrowdown']||t.back)throttle-=1;
-  if(keys['a']||keys['arrowleft']||t.left)steer+=1;
-  if(keys['d']||keys['arrowright']||t.right)steer-=1;
+  if(keys['w']||keys['arrowup'])throttle+=1;
+  if(keys['s']||keys['arrowdown'])throttle-=1;
+  if(keys['a']||keys['arrowleft'])steer+=1;
+  if(keys['d']||keys['arrowright'])steer-=1;
+  // analog drag stick takes over when active (proportional control)
+  if(state.drive && state.drive.active){
+    throttle=state.drive.throttle;
+    steer=state.drive.steer;
+  }
   state.input.brake=!!keys[' '];
-  state.input.throttle=throttle;state.input.steer=steer;
+  state.input.throttle=Math.max(-1,Math.min(1,throttle));
+  state.input.steer=Math.max(-1,Math.min(1,steer));
 }
 
 /* ---- auto-tour: drives toward each zone, steers around obstacles, backs up if stuck ---- */
